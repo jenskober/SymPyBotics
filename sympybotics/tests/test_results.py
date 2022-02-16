@@ -1,6 +1,7 @@
 import sympy
 import numpy
 from math import cos, sin
+import math
 
 import sympybotics
 from sympybotics._compatibility_ import exec_

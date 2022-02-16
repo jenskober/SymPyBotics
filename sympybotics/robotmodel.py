@@ -1,6 +1,6 @@
-
 import sys
 import numpy
+import math
 
 from .geometry import Geometry
 from .kinematics import Kinematics
