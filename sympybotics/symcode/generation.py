@@ -1,11 +1,11 @@
-
 import copy
 import sympy
 import re
 
 
 options = {}
-options['unroll_square'] = True
+options['c_unroll_square'] = True
+options['c_custom_sign_func'] = False
 
 
 def apply_func(code, func, apply_to_ivs=True):
@@ -49,19 +49,23 @@ def code_back_to_exprs(code):
 
 def _ccode(expr, ):
     code = sympy.ccode(expr)
-    if options['unroll_square']:
-        return re.sub(r'pow\(([^,]*), 2\)', r'((\1)*(\1))', code)
-    else:
-        return code
+    if options['c_unroll_square']:
+        code =  re.sub(r'pow\(([^,]*), 2\)', r'((\1)*(\1))', code)
+    if options['c_custom_sign_func']:
+        code =  re.sub(r'\(\(([^,]*)\) > 0\) - \(\(([^,]*)\) < 0\)', r'sign(\1)', code)
+    return code
 
 
 def _juliacode(expr, ):
-    code = sympy.printing.lambdarepr.lambdarepr(expr)
-    return code.replace('**', '^')
+    return sympy.julia_code(expr)
+
+
+def _matlabcode(expr, ):
+    return sympy.octave_code(expr)
 
 
 def code_to_string(code, out_parms, printer, indent='', realtype='',
-                   line_end='', outidxoffset=0):
+                   line_end='', outidxoffset=0, brackets=['[',']']):
 
     codestr = ''
 
@@ -77,7 +81,7 @@ def code_to_string(code, out_parms, printer, indent='', realtype='',
         codestr += '\n'
         for i in range(len(code[1][c])):
             codestr += indent + out + \
-                '[' + str(i+outidxoffset) + '] = ' + \
+                brackets[0] + str(i+outidxoffset) + brackets[1] + ' = ' + \
                 printer(code[1][c][i]) + line_end + '\n'
 
     return codestr
@@ -100,6 +104,26 @@ def codestring_count(codestring, resume=False):
         muls = int(codestring.count('*')) + int(
             codestring.count('/')) + int(codestring.count('pow'))
         return ops, {'add': adds, 'mul': muls, 'total': adds + muls}
+
+
+def gen_matlab_func(code, out_parms, func_parms, func_name='func'):
+
+    indent = 4 * ' '
+
+    matlabcode = 'function [' + ', '.join(out_parms) + '] = ' + func_name
+    matlabcode += '(' + ', '.join(func_parms) + ')\n\n'
+
+    for i, out in enumerate(out_parms):
+        matlabcode += indent + out + ' = zeros(' + str(len(code[1][i])) + ', 1);\n'
+
+    matlabcode += '\n'
+
+    mainmatlabcode = code_to_string(code, out_parms, _matlabcode, indent, line_end=';',
+                                    outidxoffset=1, brackets=['(',')'])
+
+    matlabcode += mainmatlabcode
+
+    return matlabcode
 
 
 def gen_py_func(code, out_parms, func_parms, func_name='func'):
@@ -198,6 +222,8 @@ def code_to_func(lang, code, out_parms, func_name, func_parms, symb_replace):
         gen_func = gen_c_func
     elif lang in ['julia', 'jl']:
         gen_func = gen_julia_func
+    elif lang in ['matlab', 'm']:
+        gen_func = gen_matlab_func
     else:
         raise Exception('chosen language not supported.')
 
