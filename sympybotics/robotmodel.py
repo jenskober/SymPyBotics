@@ -48,9 +48,27 @@ class RobotDynCode(object):
         p('generating geometric model')
         self.geo = Geometry(self.rbtdef)
 
+        p('generating forward kinematics code: transformation matrix')
+        geo2_se = Subexprs()
+        geo2 = Geometry(self.rbtdef, geo2_se.collect)
+        self.T_code = geo2_se.get(geo2.T[-1])
+ 
+        p('generating forward kinematics code: position vector')
+        self.p_code = geo2_se.get(geo2.p[-1])
+ 
+        p('generating forward kinematics code: rotation matrix')
+        self.R_code = geo2_se.get(geo2.R[-1])
+
         p('generating kinematic model')
         self.kin = Kinematics(self.rbtdef, self.geo)
 
+        p('generating jacobian code')
+        jacob_se = Subexprs()
+        kin2 = Kinematics(self.rbtdef, self.geo, jacob_se.collect)
+        self.J_code = jacob_se.get(kin2.J[-1])
+        # self.Jinv_code = jacob_se.get(kin2.J[-1].inv())
+
+        p('generating dynamics model')
         self.dyn = Dynamics(self.rbtdef, self.geo)
 
         p('generating inverse dynamics code')
@@ -77,6 +95,7 @@ class RobotDynCode(object):
         M_se = Subexprs()
         self.dyn.gen_inertiamatrix(M_se.collect)
         self.M_code = M_se.get(self.dyn.M)
+        # self.Minv_code = M_se.get(self.dyn.M.inv())
 
         p('generating regressor matrix code')
         H_se = Subexprs()
@@ -84,7 +103,8 @@ class RobotDynCode(object):
         self.H_code = H_se.get(self.dyn.H)
         self._H_se = H_se._subexp_iv
 
-        self._codes = ['invdyn_code', 'g_code', 'c_code', 'C_code', 'M_code',
+        self._codes = ['T_code', 'p_code', 'R_code', 'J_code',
+                       'invdyn_code', 'g_code', 'c_code', 'C_code', 'M_code',
                        'H_code']
 
         if self.rbtdef.frictionmodel is not None:
