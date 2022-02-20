@@ -2,3 +2,7 @@
 *.pyc
 *.kdev4
 *.desktop
+build
+dist
+sympybotics.egg-info
+.ipynb_checkpoints
