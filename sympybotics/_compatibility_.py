@@ -4,11 +4,11 @@ import sys
 pyversion = sys.version_info[0]
 
 # exec (from https://bitbucket.org/gutworth/six/):
-if pyversion is 3:
+if pyversion == 3:
     import builtins
     exec_ = getattr(builtins, "exec")
     del builtins
-elif pyversion is 2:
+elif pyversion == 2:
     def exec_(_code_, _globs_=None, _locs_=None):
         """Execute code in a namespace."""
         if _globs_ is None:
